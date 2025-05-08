@@ -7,6 +7,10 @@ from langchain_openai import AzureChatOpenAI
 from dotenv import load_dotenv
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
+from langchain.globals import set_debug, set_verbose
+
+# set_debug(True)
+# set_verbose(True)
 
 load_dotenv()
 
@@ -88,7 +92,7 @@ async def process_query(query: str, tools) -> str:
     )
 
     # Runs the agent with a query that might use multiple MCP server tools
-    result = agent.invoke(
+    result = await agent.ainvoke(
         {"messages": [{"role": "user", "content": query}]}
     )
 
@@ -99,7 +103,7 @@ async def main():
     exit_stack = AsyncExitStack()
     tools = await run_multi_server_agent(exit_stack)
     response = await process_query(
-        "How long does it take to drive from Oslo to Stockholm?",
+        "How long does it take to drive from Oslo to Stockholm? And how much elevation is it along the route?",
         tools
     )
     print(response)
