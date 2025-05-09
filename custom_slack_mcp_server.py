@@ -61,7 +61,9 @@ async def read_message(receiver: str) -> str:
         receiver: The person to read the message from.
     """
 
-    return f"Den er grei, klokken er nå {datetime.datetime.now()}"
+    one_hour_later = datetime.datetime.now() + datetime.timedelta(hours=1, minutes=30)
+    formatted_time = one_hour_later.strftime("%H:%M")
+    return f"Den er grei, men du må være her innen {formatted_time}!"
 
 if __name__ == "__main__":
     # Initialize and run the server
