@@ -14,7 +14,18 @@ from langchain.globals import set_debug, set_verbose
 
 load_dotenv()
 
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
+def get_env_variable(var_name: str) -> str:
+    """Get an environment variable or raise an error if not found."""
+    value = os.getenv(var_name)
+    if value is None:
+        raise ValueError(f"Environment variable {var_name} not set.")
+    return value
+
+
+GOOGLE_MAPS_API_KEY = get_env_variable("GOOGLE_MAPS_API_KEY")
+AZURE_DEPLOYMENT = get_env_variable("AZURE_DEPLOYMENT")
+AZURE_OPENAI_API_VERSION = get_env_variable("AZURE_OPENAI_API_VERSION")
 
 mcp_servers = [
     {
@@ -34,13 +45,13 @@ mcp_servers = [
             }
         )
     },
-    # {
-    #     "name": "custom_mcp_server",
-    #     "params": StdioServerParameters(
-    #         command="python",
-    #         args=["custom_mcp_server.py"]
-    #     )
-    # }
+    {
+        "name": "custom_slack_mcp_server",
+        "params": StdioServerParameters(
+            command="python",
+            args=["custom_slack_mcp_server.py"]
+        )
+    }
 ]
 
 
@@ -56,8 +67,10 @@ async def connect_to_server(exit_stack, server_config):
     await session.initialize()
 
     tools = await load_mcp_tools(session)
-    print(f"\nConnected to MCP server {name} with tools:", [
-        tool.name for tool in tools])
+
+    print(f"✅ Connected successfully to MCP server '{name}' with these tools:")
+    for tool in tools:
+        print(f"  - {tool.name}: {tool.description}")
 
     return tools
 
@@ -69,11 +82,11 @@ async def run_multi_server_agent(exit_stack):
         tools = await connect_to_server(exit_stack, server)
         all_tools.extend(tools)
 
-    # for tool in all_tools:
-        # print(tool)
-
     print(
-        f"Connected successfully to {len(mcp_servers)} servers with a total of {len(tools)} tools!")
+        f"✅ Connected successfully to {len(mcp_servers)} servers with a total of {len(all_tools)} tools!")
+
+    # for tool in all_tools:
+    # print(tool)
 
     return all_tools
 
@@ -82,8 +95,8 @@ async def process_query(query: str, tools) -> str:
     # AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY and OPENAI_API_VERSION must be set in .env file,
     # and will be automatically read by the AzureOpenAI class.
     llmModel = AzureChatOpenAI(
-        azure_deployment="gpt-4o-2024-11-20-128k-no-filter",
-        api_version="2024-12-01-preview",
+        azure_deployment=AZURE_DEPLOYMENT,
+        api_version=AZURE_OPENAI_API_VERSION,
     )
 
     agent = create_react_agent(
@@ -103,7 +116,8 @@ async def main():
     exit_stack = AsyncExitStack()
     tools = await run_multi_server_agent(exit_stack)
     response = await process_query(
-        "How long does it take to drive from Oslo to Stockholm? And how much elevation is it along the route?",
+        # "How long does it take to drive from Oslo to Stockholm? And how much elevation is it along the route?",
+        "Send melding til Janne på Slack om at jeg er forsinket med 10 minutter og få svaret tilbake.",
         tools
     )
     print(response)
